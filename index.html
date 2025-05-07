@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>子ども相談室 - まもる先生</title>
+  <style>
+    body { background: #fff; color: #000; font-family: sans-serif; padding: 1em; }
+    h1 { color: #00f; text-align: center; }
+    #chatbox { border: 2px solid #0ff; padding: 1em; max-width: 600px; margin: auto; border-radius: 10px; background: #f8f8f8; }
+    .message { margin: 0.5em 0; }
+    .user { color: #00f; }
+    .ai { color: #080; }
+    #inputArea { display: flex; margin-top: 1em; max-width: 600px; margin: 1em auto; }
+    input { flex: 1; padding: 0.5em; font-size: 1em; }
+    button { padding: 0.5em 1em; margin-left: 0.5em; background: #0ff; border: none; font-weight: bold; }
+    #helpBtn { display: block; margin: 1em auto; background: #f00; color: #fff; border-radius: 5px; font-size: 1em; }
+    #recordBox, #assessmentBox { max-width: 600px; margin: 2em auto; padding: 1em; border: 1px dashed #aaa; background: #fcfcfc; }
+    #assessmentBox { border: 2px solid #ffa500; background: #fffbe6; }
+    h2 { font-size: 1em; margin-bottom: 0.5em; }
+    textarea, select, input[type="text"], input[type="number"] { width: 100%; font-size: 1em; margin-bottom: 1em; }
+  </style>
+</head>
+<body>
+  <h1>子ども相談室</h1>
+
+  <div id="chatbox"></div>
+
+  <div id="inputArea">
+    <input type="text" id="userInput" placeholder="なんでも話してね" />
+    <button onclick="sendMessage()">送信</button>
+  </div>
+
+  <button id="helpBtn" onclick="alert('まもる先生が支援担当者に連絡しました。\n（※この機能は仮想の通知です）');">
+    たすけてボタン
+  </button>
+
+  <div id="recordBox">
+    <h2>◆ あなたの相談記録（児童相談所に見せられるよ）</h2>
+    <textarea id="recordArea" readonly rows="10"></textarea>
+  </div>
+
+  <div id="assessmentBox">
+    <h2>◆ アセスメントシート（支援者用）</h2>
+    <label>相談者の名前（匿名可）：<br><input type="text" id="name"></label>
+    <label>年齢（任意）：<br><input type="number" id="age"></label>
+    <label>主な相談内容分類：<br>
+      <select id="category">
+        <option value="未分類">未分類</option>
+        <option value="身体的虐待">身体的虐待</option>
+        <option value="心理的虐待">心理的虐待</option>
+        <option value="性的虐待">性的虐待</option>
+        <option value="ネグレクト">ネグレクト</option>
+        <option value="いじめ">いじめ</option>
+        <option value="家庭問題">家庭問題</option>
+        <option value="精神的な悩み">精神的な悩み</option>
+      </select>
+    </label>
+    <label>支援が必要な理由（自動補完）：<br>
+      <textarea id="reasonArea" readonly rows="4"></textarea>
+    </label>
+    <label>子どもが希望する支援：<br>
+      <select id="supportRequest">
+        <option value="話を聞いてほしい">話を聞いてほしい</option>
+        <option value="安全な場所がほしい">安全な場所がほしい</option>
+        <option value="学校や大人に伝えてほしい">学校や大人に伝えてほしい</option>
+        <option value="病院やカウンセリングを受けたい">病院やカウンセリングを受けたい</option>
+        <option value="わからない">わからない</option>
+      </select>
+    </label>
+  </div>
+
+  <script>
+    const chatbox = document.getElementById("chatbox");
+    const recordArea = document.getElementById("recordArea");
+    let historyText = "";
+
+    function sendMessage() {
+      const input = document.getElementById("userInput");
+      const userMessage = input.value.trim();
+      if (!userMessage) return;
+
+      appendMessage("あなた", userMessage, "user");
+      updateRecord("あなた", userMessage);
+
+      const response = getAIResponse(userMessage);
+      appendMessage("まもる先生", response, "ai");
+      updateRecord("まもる先生", response);
+
+      input.value = "";
+    }
+
+    function appendMessage(sender, text, type) {
+      const msg = document.createElement("div");
+      msg.classList.add("message", type);
+      msg.innerHTML = `<strong>${sender}：</strong> ${text}`;
+      chatbox.appendChild(msg);
+      chatbox.scrollTop = chatbox.scrollHeight;
+    }
+
+    function updateRecord(sender, text) {
+      historyText += `${sender}：${text}\n`;
+      recordArea.value = historyText;
+
+      const lower = text.toLowerCase();
+      if (sender === "あなた") {
+        if (lower.includes("たた")) {
+          document.getElementById("category").value = "身体的虐待";
+          document.getElementById("reasonArea").value = "身体的な暴力が確認されたため、支援が必要と判断されます。";
+        } else if (lower.includes("いじめ")) {
+          document.getElementById("category").value = "いじめ";
+          document.getElementById("reasonArea").value = "学校生活での苦痛があるため、相談支援が必要です。";
+        } else if (lower.includes("たべられ")) {
+          document.getElementById("category").value = "ネグレクト";
+          document.getElementById("reasonArea").value = "食事など基本的な生活が保障されていない可能性があります。";
+        } else if (lower.includes("さわられた") || lower.includes("いやなこと")) {
+          document.getElementById("category").value = "性的虐待";
+          document.getElementById("reasonArea").value = "性的被害の可能性があるため、緊急支援が必要です。";
+        }
+      }
+    }
+
+    function getAIResponse(msg) {
+      msg = msg.toLowerCase();
+
+      if (msg.includes("たたかれ") || msg.includes("お父さん") && msg.includes("たたく")) {
+        return "それは『身体的虐待』にあたるかもしれないよ。まもる先生は、君の安全がいちばん大事だと思ってるよ。必要があれば一時保護なども考えられるんだ。信頼できる先生や大人に相談できるかな？";
+      }
+      if (msg.includes("いじめ")) {
+        return "いじめのこと、話してくれてありがとう。無理に我慢しなくていいよ。先生やスクールカウンセラー、児童相談所に話すことができるよ。";
+      }
+      if (msg.includes("ごはん") && msg.includes("たべられない")) {
+        return "ごはんがちゃんと食べられていないのは心配だよ…。それは『ネグレクト（育児放棄）』にあたる場合もあるんだ。まもる先生は、君が安心して暮らせるように手伝いたいと思ってるよ。";
+      }
+      if (msg.includes("さわられた") || msg.includes("いやなことされた")) {
+        return "君のからだはとても大切なんだよ。『性的虐待』は絶対に許されないこと。まもる先生は真剣に受け止めているよ。安心して話して大丈夫。";
+      }
+      if (msg.includes("うつ") || msg.includes("しにたい")) {
+        return "生きててくれてありがとう。つらい気持ちを話してくれて本当にありがとう。まもる先生は、心の専門の先生と一緒に、君の心を大切に守っていきたいと思ってるよ。";
+      }
+      if (msg.includes("支援") || msg.includes("どうすれば")) {
+        return "まもる先生は、君の気持ちを尊重して、①安全な場所の確保、②心のケア、③必要な支援機関との連携、の3つを中心に動くよ。どんなことでも一緒に考えよう。";
+      }
+      return "うん、ちゃんと聞いているよ。よかったら、もっと詳しく話してくれる？何があったか、少しずつでも大丈夫だからね。";
+    }
+  </script>
+</body>
+</html>
